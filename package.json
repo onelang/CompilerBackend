@@ -1,0 +1,22 @@
+{
+  "name": "compilerbackend",
+  "version": "1.0.0",
+  "description": "Compiler backend for onelang.io",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/koczkatamas/CompilerBackend.git"
+  },
+  "author": "Tamas Koczka",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/koczkatamas/CompilerBackend/issues"
+  },
+  "homepage": "https://github.com/koczkatamas/CompilerBackend#readme",
+  "dependencies": {
+    "typescript": "^2.6.2"
+  }
+}

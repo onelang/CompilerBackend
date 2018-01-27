@@ -13,3 +13,8 @@ echo
 pushd InMemoryCompilers/CSharp > /dev/null
 dotnet build
 popd > /dev/null
+
+echo
+echo '    ===> Installing npm dependencies <==='
+echo
+npm i
