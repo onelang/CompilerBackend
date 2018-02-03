@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/koczkatamas/CompilerBackend#readme",
   "dependencies": {
+    "big-integer": "^1.6.26",
     "typescript": "^2.6.2"
   }
 }
