@@ -70,7 +70,17 @@ namespace OneCSharpCompiler
                         Console.SetOut(sw);
 
                         ms.Seek(0, SeekOrigin.Begin);
-                        AssemblyLoadContext.Default.LoadFromStream(ms).GetType("Program").GetMethod("Main").Invoke(null, new object[] { new string[0] });
+                        var asm = AssemblyLoadContext.Default.LoadFromStream(ms);
+                        
+                        var prgClass = asm.GetType("Program");
+                        if (prgClass == null)
+                            throw new Exception("Program class is missing!");
+                        
+                        var mainMethod = prgClass.GetMethod("Main");
+                        if (mainMethod == null)
+                            throw new Exception("Program.Main method is missing!");
+                        
+                        mainMethod.Invoke(null, new object[] { new string[0] });
                         return new Response { Result = sw.ToString() };
                     }
                     catch (Exception e)
