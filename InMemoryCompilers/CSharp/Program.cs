@@ -57,7 +57,7 @@ namespace OneCSharpCompiler
                     var errors = compileResult.Diagnostics.Where(f => f.IsWarningAsError || f.Severity == DiagnosticSeverity.Error).ToArray();
                     return new Response
                     {
-                        ExceptionText = String.Join("\n", errors.Select(x => $"[{x.Id}] {x.GetMessage()}")),
+                        ExceptionText = String.Join("\n", errors.Select(x => x)),
                         ErrorCode = "compilation_error",
                     };
                 }
