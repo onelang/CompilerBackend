@@ -15,13 +15,25 @@ namespace OneCSharpCompiler
 {
     public class Program
     {
+        class PackageSource
+        {
+            [JsonProperty("packageName")]
+            public string PackageName { get; set; }
+
+            [JsonProperty("fileName")]
+            public string FileName { get; set; }
+
+            [JsonProperty("code")]
+            public string Code { get; set; }
+        }
+
         class Request
         {
             [JsonProperty("code")]
             public string Code { get; set; }
 
-            [JsonProperty("stdlibCode")]
-            public string StdLibCode { get; set; }
+            [JsonProperty("packageSources")]
+            public PackageSource[] PackageSources { get; set; }
         }
 
         class Response
@@ -43,9 +55,9 @@ namespace OneCSharpCompiler
 
         static Response Process(Request request)
         {
-            var codeAst = CSharpSyntaxTree.ParseText(request.Code);
-            var stdlibAst = CSharpSyntaxTree.ParseText(request.StdLibCode);
-            var compilation = CSharpCompilation.Create(Path.GetRandomFileName(), new[] { codeAst, stdlibAst }, references,
+            var sources = new[] { request.Code }.Concat(request.PackageSources.Select(x => x.Code)).ToArray();
+            var asts = sources.Select(x => CSharpSyntaxTree.ParseText(x)).ToArray();
+            var compilation = CSharpCompilation.Create(Path.GetRandomFileName(), asts, references,
                 new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
             using (var ms = new MemoryStream())

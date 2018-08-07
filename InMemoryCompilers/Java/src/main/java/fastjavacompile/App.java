@@ -6,9 +6,15 @@ import java.io.*;
 import java.util.*;
 import javax.tools.*;
 
+class PackageSource {
+    public String packageName;
+    public String fileName;
+    public String code;
+}
+
 class Request {
     public String code;
-    public String stdlibCode;
+    public PackageSource[] packageSources;
     public String className;
     public String methodName;
 }
@@ -34,25 +40,11 @@ public class App
                 String requestLine = stdin.nextLine();
                 Request request = new Gson().fromJson(requestLine, Request.class);
 
-                String[] stdlibParts = request.stdlibCode.split("\nclass ");
-                String stdlibImports = stdlibParts[0];
-
                 ArrayList<SourceCode> compilationUnits = new ArrayList<SourceCode>();
                 compilationUnits.add(new SourceCode(request.className, request.code));
 
-                for (int iPart = 1; iPart < stdlibParts.length; iPart++) {
-                    String stdlibPart = stdlibParts[iPart];
-                    int offs;
-                    for (offs = 0; offs < stdlibPart.length(); offs++) {
-                        char c = stdlibPart.charAt(offs);
-                        if (!Character.isLetterOrDigit(c) && c != '_')
-                            break;
-                    }
-
-                    String name = stdlibPart.substring(0, offs);
-                    String content = stdlibPart.substring(offs);
-                    compilationUnits.add(new SourceCode(name, 
-                        stdlibImports + "\nclass " + name + "\n" + content));
+                for (PackageSource pkgSrc : request.packageSources) {
+                    compilationUnits.add(new SourceCode(pkgSrc.fileName.replace(".java", ""), pkgSrc.code));
                 }
 
                 DynamicClassLoader cl = new DynamicClassLoader(ClassLoader.getSystemClassLoader());

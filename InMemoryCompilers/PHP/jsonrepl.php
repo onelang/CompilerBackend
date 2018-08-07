@@ -45,11 +45,18 @@ while (true) {
         $request = json_decode($line, true);
         if ($request["cmd"] === "exit") break;
     
-        $code = str_replace(array("<?php", "?>"), "", $request["code"]);
-        $stdlibCode = str_replace(array("<?php", "?>"), "", $request["stdlibCode"]);
+        $sources = array("main.php" => $request["code"]);
+        foreach ($request["packageSources"] as $pkgSrc)
+            $sources[$pkgSrc["fileName"]] = $pkgSrc["code"];
+
+        $code = "";
+        foreach ($sources as $fileName => $source)
+            $code .= str_replace(array("<?php", "?>"), "", $source);
         
+        foreach ($sources as $fileName => $source)
+            $code = str_replace('require_once("'.$fileName.'");', "", $code);
+            
         ob_start();
-        eval("namespace Request$requestIdx;$stdlibCode");
         eval("namespace Request$requestIdx;$code");
         $result = ob_get_clean();
         resp(array("result" => $result)) . "\n";

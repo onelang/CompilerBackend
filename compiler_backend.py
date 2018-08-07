@@ -85,7 +85,8 @@ LANGS = {
         "versionCmd": "dotnet --info; echo CSC version: `csc -version`",
     },
     "PHP": { # uses in-memory compilation
-        "serverCmd": "php -S 127.0.0.1:{port} server.php",
+        #"jsonReplCmd": "php jsonrepl.php", # require_once causes fatal error which stops PHP execution
+        #"serverCmd": "php -S 127.0.0.1:{port} server.php",
         "port": 8003,
         "testCode": "print 'hello world!';",
         "mainFn": "main.php",
@@ -247,7 +248,8 @@ class HTTPHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
             outDir = "%s%s_%s/" % (TMP_DIR, dateStr, langName)
 
             with open(providePath(outDir + lang["mainFn"]), "wt") as f: f.write(request["code"])
-            with open(providePath(outDir + lang["stdlibFn"]), "wt") as f: f.write(request["stdlibCode"])
+            for pkgSrc in request["packageSources"]:
+                with open(providePath(outDir + pkgSrc["fileName"]), "wt") as f: f.write(pkgSrc["code"])
             
             start = time.time()
             pipes = subprocess.Popen(lang["cmd"], shell=True, cwd=outDir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)

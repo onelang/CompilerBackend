@@ -35,16 +35,29 @@ function fatal_handler() {
 register_shutdown_function("fatal_handler");
 
 try {
-    $postdata = json_decode(file_get_contents("php://input"), true);
+    $request = json_decode(file_get_contents("php://input"), true);
     
-    $code = str_replace(array("<?php", "?>", 'require_once("one.php");'), "", $postdata["code"]);
-    $stdlibCode = str_replace(array("<?php", "?>"), "", $postdata["stdlibCode"]);
-    $className = $postdata["className"];
-    $methodName = $postdata["methodName"];
+    $includes = array("one.php");
+    $sources = array($request["code"]);
+    foreach ($request["packageSources"] as $pkgSrc) {
+        $includes[] = $pkgSrc["fileName"];
+        $sources[] = $pkgSrc["code"];
+    }
+
+    $code = "";
+    foreach ($sources as $source)
+        $code .= str_replace(array("<?php", "?>"), "", $source);
     
+    foreach ($includes as $include)
+        $code = str_replace('require_once("'.$include.'");', "", $code);
+    
+    $className = $request["className"];
+    $methodName = $request["methodName"];
+    
+    print "executing code: " . $code;
+
     ob_start();
     $startTime = microtime(true);
-    eval($stdlibCode);
     eval($code);
     $elapsedMs = (int)((microtime(true) - $startTime) * 1000);
     $result = ob_get_clean();
