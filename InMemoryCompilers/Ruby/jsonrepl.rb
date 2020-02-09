@@ -14,7 +14,7 @@ while requestLine = gets
     begin
         $stdout = StringIO.new
         request = JSON.parse(requestLine)
-        eval request['stdlibCode']
+        eval request['stdlibCode'] if request['stdlibCode']
         result = eval request['code'].sub(/require 'one'/, "")
         resp({ :result => $stdout.string })
     rescue Exception

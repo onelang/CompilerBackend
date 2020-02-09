@@ -25,7 +25,7 @@ readline.createInterface({ input: process.stdin, output: process.stdout, termina
         const requestJson = JSON.parse(requestLine);
 
         let code = requestJson.code;
-        let stdlibCode = requestJson.stdlibCode;
+        let stdlibCode = requestJson.stdlibCode || "";
         if (requestJson.lang === "TypeScript") {
            code = "// TS CODE\n" + tsCompile(code);
            stdlibCode = tsCompile(stdlibCode);

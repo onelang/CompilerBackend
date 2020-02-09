@@ -248,6 +248,10 @@ class HTTPHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
             outDir = "%s%s_%s/" % (TMP_DIR, dateStr, langName)
 
             with open(providePath(outDir + lang["mainFn"]), "wt") as f: f.write(request["code"])
+
+            if "stdlibCode" in request:
+                with open(providePath(outDir + lang["stdlibFn"]), "wt") as f: f.write(request["stdlibCode"])
+
             for pkgSrc in request["packageSources"]:
                 with open(providePath(outDir + pkgSrc["fileName"]), "wt") as f: f.write(pkgSrc["code"])
             

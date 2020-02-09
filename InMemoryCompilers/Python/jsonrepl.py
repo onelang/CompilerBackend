@@ -22,7 +22,8 @@ while True:
             sys.stdout = result_stdout = StringIO()
             try:
                 sys.modules["one"] = imp.new_module("one")
-                exec(request["stdlibCode"], sys.modules["one"].__dict__)
+                if "stdlibCode" in request:
+                    exec(request["stdlibCode"], sys.modules["one"].__dict__)
                 exec(request["code"], {})
             finally:
                 sys.stdout = original_stdout
