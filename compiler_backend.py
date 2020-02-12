@@ -230,8 +230,8 @@ class HTTPHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         requestJson = self.rfile.read(int(self.headers.getheader('content-length')))
         useCache = self.queryParams.get("useCache")
         if useCache:
-            requestHash = hashlib.sha256(requestJson).hexdigest()
-            cacheFn = "%s/compilation_cache_%s_response.json" % (TMP_DIR, requestHash)
+            requestHash = hashlib.sha256(requestJson).hexdigest()[0:12]
+            cacheFn = "%s/compilecache_%s_resp.json" % (TMP_DIR, requestHash)
             if os.path.exists(cacheFn):
                 with open(cacheFn, "rt") as f: 
                     self.resp(200, json.loads(f.read()))
