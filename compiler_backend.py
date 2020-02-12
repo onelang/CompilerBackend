@@ -20,7 +20,7 @@ PORT = 11111
 TEST_SERVERS = False
 TMP_DIR = "tmp/"
 LANGS = {
-    "Java": { # uses in-memory compilation
+    "java": { # uses in-memory compilation
         "jsonReplCmd": "java -cp target/classes:lib/* fastjavacompile.App",
         "testCode": '''
             class Program {
@@ -34,7 +34,7 @@ LANGS = {
         "cmd": "javac Program.java one.java && java Program",
         "versionCmd": "javac -version; java -version",
     },
-    "TypeScript": { # uses in-memory compilation
+    "typescript": { # uses in-memory compilation
         "jsonReplCmd": "node jsonrepl.js",
         "testCode": "console.log('hello world!');",
         "cmd": "tsc index.ts node_modules/one/index.ts > /dev/null; node index.js",
@@ -42,7 +42,7 @@ LANGS = {
         "stdlibFn": "node_modules/one/index.ts",
         "versionCmd": "echo Node: `node -v`; echo TSC: `tsc -v`",
     },
-    "JavaScript": { # uses in-memory compilation
+    "javascript": { # uses in-memory compilation
         "jsonReplCmd": "node jsonrepl.js",
         "jsonReplDir": "TypeScript",
         "testCode": "console.log('hello world!');",
@@ -51,7 +51,7 @@ LANGS = {
         "stdlibFn": "node_modules/one/index.js",
         "versionCmd": "echo Node: `node -v`",
     },
-    "Python": { # uses in-memory compilation
+    "python": { # uses in-memory compilation
         "jsonReplCmd": "python -u jsonrepl.py",
         "testCode": "print 'hello world!'",
         "mainFn": "main.py",
@@ -59,7 +59,7 @@ LANGS = {
         "cmd": "python main.py",
         "versionCmd": "python --version",
     },
-    "Ruby": { # uses in-memory compilation
+    "ruby": { # uses in-memory compilation
         "jsonReplCmd": "ruby jsonrepl.rb",
         "testCode": "puts 'hello world!'",
         "mainFn": "main.rb",
@@ -67,7 +67,7 @@ LANGS = {
         "cmd": "ruby -I. main.rb",
         "versionCmd": "ruby -v",
     },
-    "CSharp": { # uses in-memory compilation
+    "csharp": { # uses in-memory compilation
         "jsonReplCmd": "dotnet run --no-build",
         "testCode": """
             using System;
@@ -84,7 +84,7 @@ LANGS = {
         "stdlibFn": "StdLib.cs",
         "versionCmd": "dotnet --info; echo CSC version: `csc -version`",
     },
-    "PHP": { # uses in-memory compilation
+    "php": { # uses in-memory compilation
         #"jsonReplCmd": "php jsonrepl.php", # require_once causes fatal error which stops PHP execution
         #"serverCmd": "php -S 127.0.0.1:{port} server.php",
         "port": 8003,
@@ -94,28 +94,28 @@ LANGS = {
         "cmd": "php main.php",
         "versionCmd": "php -v",
     },
-    "CPP": {
+    "cpp": {
         "ext": "cpp",
         "mainFn": "main.cpp",
         "stdlibFn": "one.hpp",
         "cmd": "g++ -std=c++17 main.cpp -I. -o binary && ./binary",
         "versionCmd": "g++ -v",
     },
-    "Go": {
+    "go": {
         "ext": "go",
         "mainFn": "main.go",
         "stdlibFn": "src/one/one.go",
         "cmd": "GOPATH=$PWD go run main.go",
         "versionCmd": "go version",
     },
-    "Perl": {
+    "perl": {
         "ext": "pl",
         "mainFn": "main.pl",
         "stdlibFn": "one.pm",
         "cmd": "perl -I. main.pl",
         "versionCmd": "perl -v",
     },
-    "Swift": {
+    "swift": {
         "ext": "swift",
         "mainFn": "main.swift",
         "stdlibFn": "one.swift",
