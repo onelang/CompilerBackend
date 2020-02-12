@@ -11,6 +11,7 @@ import errno
 import sys
 import random
 import os.path
+import hashlib
 
 import SimpleHTTPServer
 from SocketServer import ThreadingMixIn
@@ -227,22 +228,26 @@ class HTTPHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 
     def api_compile(self):
         requestJson = self.rfile.read(int(self.headers.getheader('content-length')))
+        useCache = self.queryParams.get("useCache")
+        if useCache:
+            requestHash = hashlib.sha256(requestJson).hexdigest()
+            cacheFn = "%s/compilation_cache_%s_response.json" % (TMP_DIR, requestHash)
+            if os.path.exists(cacheFn):
+                with open(cacheFn, "rt") as f: 
+                    self.resp(200, json.loads(f.read()))
+                    return
+
         request = json.loads(requestJson)
         request["cmd"] = "compile"
         langName = request["lang"]
         lang = LANGS[langName]
 
+        start = time.time()
         if "jsonRepl" in lang:
-            start = time.time()
             response = lang["jsonRepl"].request(request)
-            response["elapsedMs"] = int((time.time() - start) * 1000)
-            self.resp(200, response)
         elif "server" in lang:
-            start = time.time()
             responseJson = postRequest("http://127.0.0.1:%d" % lang["port"], requestJson)
             response = json.loads(responseJson)
-            response["elapsedMs"] = int((time.time() - start) * 1000)
-            self.resp(200, response)
         else:
             dateStr = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             outDir = "%s%s_%s/" % (TMP_DIR, dateStr, langName)
@@ -255,16 +260,21 @@ class HTTPHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
             for pkgSrc in request["packageSources"]:
                 with open(providePath(outDir + pkgSrc["fileName"]), "wt") as f: f.write(pkgSrc["code"])
             
-            start = time.time()
             pipes = subprocess.Popen(lang["cmd"], shell=True, cwd=outDir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             stdout, stderr = pipes.communicate()
 
+            response = { "result": stdout }
+
             if pipes.returncode != 0 or len(stderr) > 0:
-                self.resp(400, { "result": stdout, "exceptionText": stderr })
+                response["exceptionText"] = stderr
             else:
-                elapsedMs = int((time.time() - start) * 1000)
                 shutil.rmtree(outDir)
-                self.resp(200, { "result": stdout, "elapsedMs": elapsedMs })
+
+        if useCache:
+            with open(cacheFn, "wt") as f: f.write(json.dumps(response))
+
+        response["elapsedMs"] = int((time.time() - start) * 1000)
+        self.resp(200, response)
 
     def api_compiler_versions(self):
         # TODO: thread-safety
@@ -307,6 +317,14 @@ class HTTPHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
             global requireToken, token
             if requireToken and self.headers.getheader('authentication') != "Token %s" % token:
                 return self.resp(403, { "exceptionText": "Authentication token is invalid", "errorCode": "invalid_token" })
+
+            pathParts = self.path.split('?', 1)
+            self.path = pathParts[0]
+            self.qs = pathParts[1] if len(pathParts) > 1 else ""
+            self.queryParams = {}
+            for keyValue in self.qs.split('&'):
+                keyValueParts = keyValue.split("=", 1)
+                self.queryParams[keyValueParts[0]] = keyValueParts[1] if len(keyValueParts) > 1 else True
 
             if self.path == '/compiler_versions':
                 self.api_compiler_versions()
