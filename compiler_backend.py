@@ -233,8 +233,10 @@ class HTTPHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
             requestHash = hashlib.sha256(requestJson).hexdigest()[0:12]
             cacheFn = "%s/compilecache_%s_resp.json" % (TMP_DIR, requestHash)
             if os.path.exists(cacheFn):
-                with open(cacheFn, "rt") as f: 
-                    self.resp(200, json.loads(f.read()))
+                with open(cacheFn, "rt") as f:
+                    response = json.loads(f.read())
+                    response["fromCache"] = True
+                    self.resp(200, response)
                     return
 
         request = json.loads(requestJson)
@@ -274,6 +276,7 @@ class HTTPHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
             with open(cacheFn, "wt") as f: f.write(json.dumps(response))
 
         response["elapsedMs"] = int((time.time() - start) * 1000)
+        response["fromCache"] = False
         self.resp(200, response)
 
     def api_compiler_versions(self):
