@@ -21,9 +21,10 @@ while True:
             original_stdout = sys.stdout
             sys.stdout = result_stdout = StringIO()
             try:
-                sys.modules["one"] = imp.new_module("one")
-                if "stdlibCode" in request:
-                    exec(request["stdlibCode"], sys.modules["one"].__dict__)
+                for pkgSource in request["packageSources"]:
+                    name = pkgSource["fileName"].replace(".py", "")
+                    sys.modules[name] = imp.new_module(name)
+                    exec(pkgSource["code"], sys.modules[name].__dict__)
                 exec(request["code"], {})
             finally:
                 sys.stdout = original_stdout

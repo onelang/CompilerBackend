@@ -17,6 +17,7 @@ import SimpleHTTPServer
 from SocketServer import ThreadingMixIn
 from BaseHTTPServer import HTTPServer
 
+ALLOW_CACHE = True
 PORT = 11111
 TEST_SERVERS = False
 TMP_DIR = "tmp/"
@@ -81,6 +82,8 @@ LANGS = {
             }
         """,
         "cmd": "csc Program.cs StdLib.cs > /dev/null && ./Program.exe",
+        "compileCmd": "csc -recurse:src/*.cs -out:bin/Program.exe",
+        "runCmd": "mono Program.exe",
         "mainFn": "Program.cs",
         "stdlibFn": "StdLib.cs",
         "versionCmd": "dotnet --info; echo CSC version: `csc -version`",
@@ -99,7 +102,7 @@ LANGS = {
         "ext": "cpp",
         "mainFn": "main.cpp",
         "stdlibFn": "one.hpp",
-        "cmd": "g++ -std=c++17 main.cpp -I. -o binary && ./binary",
+        "cmd": "g++ -std=c++17 main.cpp one_packages/*/*.cpp -I. -Ione_packages -o binary && ./binary",
         "versionCmd": "g++ -v",
     },
     "go": {
@@ -120,7 +123,7 @@ LANGS = {
         "ext": "swift",
         "mainFn": "main.swift",
         "stdlibFn": "one.swift",
-        "cmd": "cat one.swift main.swift | swift -",
+        "cmd": "cat main.swift | swift -",
         "versionCmd": "swift --version",
     }
 }
@@ -210,7 +213,7 @@ class HTTPHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
         pass
 
     def resp(self, statusCode, result):
-        result["controllerVersion"] = "one:v1:20180122"
+        result["controllerVersion"] = "one:v2:20200218"
         responseBody = json.dumps(result)
         self.send_response(statusCode)
         self.send_header("Content-Length", "%d" % len(responseBody))
@@ -229,50 +232,72 @@ class HTTPHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
     def api_compile(self):
         requestJson = self.rfile.read(int(self.headers.getheader('content-length')))
         useCache = self.queryParams.get("useCache")
-        if useCache:
+        if ALLOW_CACHE:
             requestHash = hashlib.sha256(requestJson).hexdigest()[0:12]
             cacheFn = "%s/compilecache_%s_resp.json" % (TMP_DIR, requestHash)
-            if os.path.exists(cacheFn):
+            if useCache and os.path.exists(cacheFn):
                 with open(cacheFn, "rt") as f:
                     response = json.loads(f.read())
                     response["fromCache"] = True
+                    response["cacheId"] = requestHash
                     self.resp(200, response)
                     return
 
         request = json.loads(requestJson)
         request["cmd"] = "compile"
         langName = request["lang"]
+        mode = request["mode"] if "mode" in request else "auto"
         lang = LANGS[langName]
 
         start = time.time()
-        if "jsonRepl" in lang:
+        if mode == "jsonRepl" or (mode == "auto" and "jsonRepl" in lang):
             response = lang["jsonRepl"].request(request)
-        elif "server" in lang:
+        elif mode == "server" or (mode == "auto" and "server" in lang):
             responseJson = postRequest("http://127.0.0.1:%d" % lang["port"], requestJson)
             response = json.loads(responseJson)
-        else:
-            dateStr = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            outDir = "%s%s_%s/" % (TMP_DIR, dateStr, langName)
+        elif mode == "native" or mode == "auto":
+            dateStr = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+            dirName = "%s_%s" % (dateStr, langName)
+            if "name" in request:
+                dirName += "_" + request["name"]
+            outDir = "%s%s/" % (TMP_DIR, dirName)
+            binDir = outDir+"/bin/"
+            mkdir_p(binDir)
 
-            with open(providePath(outDir + lang["mainFn"]), "wt") as f: f.write(request["code"])
+            response = { "tmpDir": dirName, "success": False }
 
-            if "stdlibCode" in request:
-                with open(providePath(outDir + lang["stdlibFn"]), "wt") as f: f.write(request["stdlibCode"])
+            for (filename, code) in request["files"].items():
+                with open(providePath(outDir + "src/" + filename), "wt") as f: f.write(code)
 
-            for pkgSrc in request["packageSources"]:
-                with open(providePath(outDir + pkgSrc["fileName"]), "wt") as f: f.write(pkgSrc["code"])
+            #with open(providePath(outDir + lang["mainFn"]), "wt") as f: f.write(request["code"])
+            #if "stdlibCode" in request:
+            #    with open(providePath(outDir + lang["stdlibFn"]), "wt") as f: f.write(request["stdlibCode"])
+            #for pkgSrc in request["packageSources"]:
+            #    with open(providePath(outDir + "one_packages/" + pkgSrc["packageName"] + "/" + pkgSrc["fileName"]), "wt") as f: f.write(pkgSrc["code"])
             
-            pipes = subprocess.Popen(lang["cmd"], shell=True, cwd=outDir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            pipes = subprocess.Popen(lang["compileCmd"], shell=True, cwd=outDir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             stdout, stderr = pipes.communicate()
+            success = pipes.returncode == 0 and stderr == ""
+            response["compilation"] = { "stdout": stdout, "stderr": stderr, "exitCode": pipes.returncode, "success": success }
 
-            response = { "result": stdout }
-
-            if pipes.returncode != 0 or len(stderr) > 0:
-                response["exceptionText"] = stderr
+            if not success:
+                response["error"] = "Program run failed with exitCode %d\nStderr:\n%s\nStdout:\n%s" % (pipes.returncode, stderr, stdout)
             else:
-                shutil.rmtree(outDir)
+                pipes = subprocess.Popen(lang["runCmd"], shell=True, cwd=binDir, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                stdout, stderr = pipes.communicate()
+                success = pipes.returncode == 0 and stderr == ""
+                response["run"] = { "stdout": stdout, "stderr": stderr, "exitCode": pipes.returncode, "success": success }
 
-        if useCache:
+                if not success:
+                    response["error"] = "Program run failed with exitCode %d\nStderr:\n%s\nStdout:\n%s" % (pipes.returncode, stderr, stdout)
+                else:
+                    response["success"] = True
+                    shutil.rmtree(outDir)
+        else:
+            response = { "error": "Unknown mode '%s'" % mode, "success": False }
+
+        # cache should be overwritten even when useCache is False, otherwise a broken version stays there forever
+        if ALLOW_CACHE: 
             with open(cacheFn, "wt") as f: f.write(json.dumps(response))
 
         response["elapsedMs"] = int((time.time() - start) * 1000)

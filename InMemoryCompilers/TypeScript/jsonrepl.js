@@ -22,11 +22,12 @@ function resp(result) {
 
 readline.createInterface({ input: process.stdin, output: process.stdout, terminal: false }).on('line', requestLine => {
     try {
+        //console.error(requestLine);
         const requestJson = JSON.parse(requestLine);
 
         let code = requestJson.code;
         let stdlibCode = requestJson.stdlibCode || "";
-        if (requestJson.lang === "TypeScript") {
+        if (requestJson.lang === "typescript") {
            code = "// TS CODE\n" + tsCompile(code);
            stdlibCode = tsCompile(stdlibCode);
         }
@@ -34,14 +35,15 @@ readline.createInterface({ input: process.stdin, output: process.stdout, termina
         let result = "";
         const script = new vm.Script(code);
         const context = new vm.createContext({ 
-           console: {
-               log: (...args) => result += (util.format(...args) + '\n'),
-           },
-           require: (...args) => {
-               if (args[0] === 'one')
-                   return requireFromString(stdlibCode, 'one.js');
-               else
-                   return require(...args);
+            console: {
+                log: (...args) => result += (util.format(...args) + '\n'),
+            },
+            require: (...args) => {
+                const fullFn = `${args[0]}.js`;
+                const pkgSource = requestJson.packageSources.find(x => `${x.packageName}/${x.fileName}` === fullFn);
+                const result = pkgSource ? requireFromString(pkgSource.code, fullFn) : require(...args);
+                console.error(`require: "${fullFn}" ->`, result);
+                return result;
             }
         });
 
